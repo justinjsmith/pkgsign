@@ -67,18 +67,7 @@ func pkgSignMain() {
 		return
 	}
 	defer fileToSign.Close()
-
-	info, _ := fileToSign.Stat()
-	filesize := info.Size()
-	blocks := uint64(math.Ceil(float64(filesize) / float64(filechunk)))
-	hash := sha1.New()
-	for i := uint64(0); i < blocks; i++ {
-		blocksize := int(math.Min(filechunk, float64(filesize-int64(i*filechunk))))
-		buf := make([]byte, blocksize)
-		fileToSign.Read(buf)
-		io.WriteString(hash, string(buf))
-	}
-	sha1Hash := hash.Sum(nil)
+	sha1Hash := calcSha(fileToSign)
 
 	manifest := Manifest{
 		PackageName: fileToSign.Name(),
@@ -120,6 +109,20 @@ func pkgSignMain() {
 
 	fmt.Printf("Signed manifest written to %s\n\n", fileToSign.Name()+".manifest")
 	return
+}
+
+func calcSha(fileToSign *os.File) []byte {
+	info, _ := fileToSign.Stat()
+	filesize := info.Size()
+	blocks := uint64(math.Ceil(float64(filesize) / float64(filechunk)))
+	hash := sha1.New()
+	for i := uint64(0); i < blocks; i++ {
+		blocksize := int(math.Min(filechunk, float64(filesize-int64(i*filechunk))))
+		buf := make([]byte, blocksize)
+		fileToSign.Read(buf)
+		io.WriteString(hash, string(buf))
+	}
+	return hash.Sum(nil)
 }
 
 func loadKey(keyBytes, passphrase []byte) (*rsa.PrivateKey, error) {
