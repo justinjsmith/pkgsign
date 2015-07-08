@@ -86,7 +86,13 @@ func pkgSignMain() {
 		ReleaseDate: time.Now(),
 	}
 
-	privKey, err := loadKey()
+	keyBytes, err := ioutil.ReadFile(*key)
+	if err != nil {
+		report(err)
+		return
+	}
+
+	privKey, err := loadKey(keyBytes, askPassPhrase())
 	if err != nil {
 		report(err)
 		return
@@ -112,17 +118,11 @@ func pkgSignMain() {
 		return
 	}
 
-	fmt.Printf("Signed manifest written to %s\n", fileToSign.Name()+".manifest")
+	fmt.Printf("Signed manifest written to %s\n\n", fileToSign.Name()+".manifest")
 	return
 }
 
-func loadKey() (*rsa.PrivateKey, error) {
-	keyBytes, err := ioutil.ReadFile(*key)
-	if err != nil {
-		return nil, err
-	}
-	passphrase := askPassPhrase()
-
+func loadKey(keyBytes, passphrase []byte) (*rsa.PrivateKey, error) {
 	pemBlock, _ := pem.Decode(keyBytes)
 	if pemBlock == nil {
 		return nil, errors.New("cannot find the next PEM formatted block")
@@ -149,7 +149,7 @@ func parseKey(block *pem.Block, passphrase []byte) (*rsa.PrivateKey, error) {
 }
 
 func askPassPhrase() []byte {
-	fmt.Fprint(os.Stderr, "Enter passphrase (empty for no passphrase): ")
+	fmt.Fprint(os.Stderr, "\nEnter passphrase (empty for no passphrase): ")
 	pass := gopass.GetPasswd()
 	fmt.Fprintln(os.Stderr)
 	return pass
