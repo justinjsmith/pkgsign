@@ -41,7 +41,7 @@ type Manifest struct {
 }
 
 func usage() {
-	fmt.Fprintf(os.Stderr, "\nusage: pkgsign -f [path] -k [path] -o [path]\n")
+	fmt.Fprintf(os.Stderr, "\nusage: pkgsign -f [path] -k [path]\n")
 	flag.PrintDefaults()
 	fmt.Fprintf(os.Stderr, "\n")
 	os.Exit(2)
@@ -107,7 +107,7 @@ func pkgSignMain() {
 		return
 	}
 
-	fmt.Printf("Signed manifest written to %s\n\n", fileToSign.Name()+".manifest")
+	fmt.Printf("Signed manifest written to %s\n", fileToSign.Name()+".manifest")
 	return
 }
 
@@ -152,7 +152,7 @@ func parseKey(block *pem.Block, passphrase []byte) (*rsa.PrivateKey, error) {
 }
 
 func askPassPhrase() []byte {
-	fmt.Fprint(os.Stderr, "\nEnter passphrase (empty for no passphrase): ")
+	fmt.Fprint(os.Stderr, "Enter passphrase (empty for no passphrase): ")
 	pass := gopass.GetPasswd()
 	fmt.Fprintln(os.Stderr)
 	return pass
