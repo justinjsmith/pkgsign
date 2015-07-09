@@ -30,14 +30,18 @@ const (
 var (
 	file     = flag.String("f", "file.tar.gz", "the file to sign")
 	key      = flag.String("k", "key.pem", "the private key to use when signing")
+	product  = flag.String("p", "", "the name of the product in the file (if applicable)")
+	company  = flag.String("c", "", "the name of the signing organization")
 	exitCode = 0
 )
 
 type Manifest struct {
+	Company     string `json:",omitempty"`
+	Product     string `json:",omitempty"`
 	PackageName string
 	PackageSha1 string
 	ReleaseDate time.Time
-	Signature   string
+	Signature   string `json:",omitempty"`
 }
 
 func usage() {
@@ -61,46 +65,42 @@ func pkgSignMain() {
 	flag.Usage = usage
 	flag.Parse()
 
+	// open the file and calculate the Sha1 of the file
 	fileToSign, err := os.Open(*file)
 	if err != nil {
 		report(err)
 		return
 	}
 	defer fileToSign.Close()
-	sha1Hash := calcSha(fileToSign)
+	pkgSha1 := calcSha(fileToSign)
 
+	// build the manifest object
 	manifest := Manifest{
+		Company:     *company,
+		Product:     *product,
 		PackageName: fileToSign.Name(),
-		PackageSha1: fmt.Sprintf("%x", sha1Hash),
+		PackageSha1: fmt.Sprintf("%x", pkgSha1),
 		ReleaseDate: time.Now(),
 	}
 
+	// open the key, parse it and decrypt it (if needed)
 	keyBytes, err := ioutil.ReadFile(*key)
 	if err != nil {
 		report(err)
 		return
 	}
-
 	privKey, err := loadKey(keyBytes, askPassPhrase())
 	if err != nil {
 		report(err)
 		return
 	}
-	var h crypto.Hash
-	sig, err := rsa.SignPKCS1v15(rand.Reader, privKey, h, sha1Hash)
+
+	// sign the manifest and write it to disk
+	manBytes, err := signManifest(manifest, privKey)
 	if err != nil {
 		report(err)
 		return
 	}
-
-	manifest.Signature = fmt.Sprintf("%x", sig)
-
-	manBytes, err := json.Marshal(manifest)
-	if err != nil {
-		report(err)
-		return
-	}
-
 	err = ioutil.WriteFile(fileToSign.Name()+".manifest", manBytes, 0777)
 	if err != nil {
 		report(err)
@@ -109,6 +109,32 @@ func pkgSignMain() {
 
 	fmt.Printf("Signed manifest written to %s\n", fileToSign.Name()+".manifest")
 	return
+}
+
+func signManifest(manifest Manifest, privKey *rsa.PrivateKey) ([]byte, error) {
+	// marshal the manifest (without the signature field set)
+	manifestToSign, err := json.Marshal(manifest)
+	if err != nil {
+		return nil, err
+	}
+
+	// calculate the Sha1 of the manifest bytes
+	var h crypto.Hash
+	manifestSha1 := sha1.New()
+	manifestSha1.Write(manifestToSign)
+	manShaVal := manifestSha1.Sum(nil)
+
+	// calculate the signature of the manifest
+	sig, err := rsa.SignPKCS1v15(rand.Reader, privKey, h, manShaVal)
+	if err != nil {
+		return nil, err
+	}
+
+	// set the Signature field of the manifest
+	manifest.Signature = fmt.Sprintf("%x", sig)
+
+	// marshal the manifest with signature
+	return json.Marshal(manifest)
 }
 
 func calcSha(fileToSign *os.File) []byte {
