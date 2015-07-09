@@ -22,7 +22,7 @@ As an example, consider the `foo.tar.gz` file. If the `pkgsign` command is:
 ./pkgsign -f foo.tar.gz -k myKey.key -c SomeCorp -p SomeProduct
 ```
 
-The manifest will look similar to the following:
+The result will be a JSON file that looks similar to the following:
 ```
 {
 	"Company": "SomeCorp",
@@ -33,9 +33,12 @@ The manifest will look similar to the following:
     "Signature": "..."
 }
 ```
+This file is called the manifest and it will have the name 
+`foo.tar.gz.manifest`.
 
 The value of the `PackageSha1` field will be identical to the output of running
 the `sha1sum` tool on the `foo.tar.gz` file.
+
 
 The signature is calculated using the hash of the manifest without the 
 signature field set. The signing algorithm is RSASSA-PKCS1-V1_5-SIGN from RSA 
