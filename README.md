@@ -2,7 +2,7 @@
 A simple utility for signing files with a private key. It is a companion to 
 [pkgverify](http://github.com/justinjsmith/pkgverify). 
 
-The goal of these two packages is to add cryptographic assurance of file 
+The goal of these two utilities is to add cryptographic assurance of file 
 authorship and integrity.
 
 ````
