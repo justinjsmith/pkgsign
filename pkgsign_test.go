@@ -1,6 +1,10 @@
 package main
 
 import (
+	"crypto"
+	"crypto/rsa"
+	"crypto/sha1"
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -78,5 +82,40 @@ func TestShas(t *testing.T) {
 		if shaStr != st.shaValue {
 			t.Fatalf("Sha calculation failed: %s, got %s", st.shaValue, shaStr)
 		}
+	}
+}
+
+// might be redundant / unnecessary
+func TestSignatureRoundtrip(t *testing.T) {
+	key, _ := loadKey([]byte(privKeyPem), []byte(""))
+
+	man := Manifest{
+		Company:     "Foo",
+		Product:     "Bar",
+		PackageSha1: "abcdefg",
+	}
+
+	signedMan, err := signManifest(man, key)
+	if err != nil {
+		t.Fatalf("Can't sign manifest: %s", err)
+	}
+
+	// get the signature value
+	var rtManifest Manifest
+	err = json.Unmarshal(signedMan, &rtManifest)
+	if err != nil {
+		t.Fatalf("Can't unmarshal manifest: %s", err)
+	}
+	sigVal := []byte(rtManifest.Signature)
+
+	// verify the signature manually
+	manBytes, _ := json.Marshal(man)
+	var h crypto.Hash
+	manifestSha1 := sha1.New()
+	manifestSha1.Write(manBytes)
+	manShaVal := manifestSha1.Sum(nil)
+	err = rsa.VerifyPKCS1v15(&key.PublicKey, h, manShaVal, sigVal)
+	if err != nil {
+		t.Fatalf("Can't verify signature: %s", err)
 	}
 }

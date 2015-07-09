@@ -39,9 +39,9 @@ type Manifest struct {
 	Company     string `json:",omitempty"`
 	Product     string `json:",omitempty"`
 	PackageName string
-	PackageSha1 string
+	PackageSha1 string // use string so value easy to compare with shasum output
 	ReleaseDate time.Time
-	Signature   string `json:",omitempty"`
+	Signature   []byte `json:",omitempty"`
 }
 
 func usage() {
@@ -131,7 +131,7 @@ func signManifest(manifest Manifest, privKey *rsa.PrivateKey) ([]byte, error) {
 	}
 
 	// set the Signature field of the manifest
-	manifest.Signature = fmt.Sprintf("%x", sig)
+	manifest.Signature = sig
 
 	// marshal the manifest with signature
 	return json.Marshal(manifest)
