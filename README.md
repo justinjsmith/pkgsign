@@ -18,7 +18,9 @@ available on the certstrap README.
 ## The basics
 As an example, consider the `foo.tar.gz` file. If the `pkgsign` command is:
 
-````./pkgsign -f foo.tar.gz -k myKey.key -c SomeCorp -p SomeProduct
+```
+./pkgsign -f foo.tar.gz -k myKey.key -c SomeCorp -p SomeProduct
+```
 
 The manifest will look similar to the following:
 ```
