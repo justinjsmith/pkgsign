@@ -65,7 +65,7 @@ func pkgSignMain() {
 	flag.Usage = usage
 	flag.Parse()
 
-	// open the file and calculate the Sha1 of the file
+	// open the file to sign and calculate the file's Sha1
 	fileToSign, err := os.Open(*file)
 	if err != nil {
 		report(err)
