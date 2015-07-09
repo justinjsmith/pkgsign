@@ -28,8 +28,8 @@ const (
 )
 
 var (
-	file     = flag.String("f", "file.tar.gz", "the file to sign")
-	key      = flag.String("k", "key.pem", "the private key to use when signing")
+	file     = flag.String("f", "", "the file to sign")
+	key      = flag.String("k", "", "the private key to use when signing")
 	product  = flag.String("p", "", "the name of the product in the file (if applicable)")
 	company  = flag.String("c", "", "the name of the signing organization")
 	exitCode = 0
@@ -64,6 +64,10 @@ func main() {
 func pkgSignMain() {
 	flag.Usage = usage
 	flag.Parse()
+
+	if *file == "" || *key == "" {
+		usage()
+	}
 
 	// open the file to sign and calculate the file's Sha1
 	fileToSign, err := os.Open(*file)
