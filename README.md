@@ -6,7 +6,7 @@ The goal of these two utilities is to add cryptographic assurance of file
 authorship and integrity.
 
 ````
-pkgsign -f="/path/to/file/to/sign" -k="/path/to/key"
+pkgsign -file="/path/to/file/to/sign" -key="/path/to/key" -cert="/path/to/cert"
 ````
 
 ## Drop-dead simple way to create keys
@@ -19,7 +19,7 @@ available on the certstrap README.
 As an example, consider the `foo.tar.gz` file. If the `pkgsign` command is:
 
 ```
-./pkgsign -f foo.tar.gz -k myKey.key -c SomeCorp -p SomeProduct
+./pkgsign -file foo.tar.gz -key myCert.key -cert myCert.crt -corp SomeCorp -product SomeProduct
 ```
 
 The result will be a JSON file that looks similar to the following:

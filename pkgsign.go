@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/sha1"
+	"crypto/tls"
 	"crypto/x509"
 	"encoding/json"
 	"encoding/pem"
@@ -15,6 +16,7 @@ import (
 	"io"
 	"io/ioutil"
 	"math"
+	"math/big"
 	"os"
 	"time"
 
@@ -28,10 +30,11 @@ const (
 )
 
 var (
-	file     = flag.String("f", "", "the file to sign")
-	key      = flag.String("k", "", "the private key to use when signing")
-	product  = flag.String("p", "", "the name of the product in the file (if applicable)")
-	company  = flag.String("c", "", "the name of the signing organization")
+	file     = flag.String("file", "", "the file to sign")
+	key      = flag.String("key", "", "the private key to use when signing")
+	cert     = flag.String("cert", "", "the certificate")
+	product  = flag.String("product", "", "the name of the product in the file (if applicable)")
+	company  = flag.String("corp", "", "the name of the signing organization")
 	exitCode = 0
 )
 
@@ -41,6 +44,7 @@ type Manifest struct {
 	PackageName string
 	PackageSha1 string // use string so value easy to compare with shasum output
 	ReleaseDate time.Time
+	KeyId       *big.Int
 	Signature   []byte `json:",omitempty"`
 }
 
@@ -65,7 +69,7 @@ func pkgSignMain() {
 	flag.Usage = usage
 	flag.Parse()
 
-	if *file == "" || *key == "" {
+	if *file == "" || *key == "" || *cert == "" {
 		usage()
 	}
 
@@ -78,6 +82,14 @@ func pkgSignMain() {
 	defer fileToSign.Close()
 	pkgSha1 := calcSha(fileToSign)
 
+	// verify the certificate and private key are related & get the cert serial
+	// number
+	serialNumber, err := loadCert(*cert, *key)
+	if err != nil {
+		report(err)
+		return
+	}
+
 	// build the manifest object
 	manifest := Manifest{
 		Company:     *company,
@@ -85,6 +97,7 @@ func pkgSignMain() {
 		PackageName: fileToSign.Name(),
 		PackageSha1: fmt.Sprintf("%x", pkgSha1),
 		ReleaseDate: time.Now(),
+		KeyId:       serialNumber,
 	}
 
 	// open the key, parse it and decrypt it (if needed)
@@ -105,7 +118,7 @@ func pkgSignMain() {
 		report(err)
 		return
 	}
-	err = ioutil.WriteFile(fileToSign.Name()+".manifest", manBytes, 0777)
+	err = ioutil.WriteFile(fileToSign.Name()+".manifest", manBytes, 0444)
 	if err != nil {
 		report(err)
 		return
@@ -113,6 +126,19 @@ func pkgSignMain() {
 
 	fmt.Printf("Signed manifest written to %s\n", fileToSign.Name()+".manifest")
 	return
+}
+
+func loadCert(cert, key string) (*big.Int, error) {
+	tlsCert, err := tls.LoadX509KeyPair(cert, key)
+	if err != nil {
+		return nil, err
+	}
+
+	x509Cert, err := x509.ParseCertificate(tlsCert.Certificate[0])
+	if err != nil {
+		return nil, err
+	}
+	return x509Cert.SerialNumber, nil
 }
 
 func signManifest(manifest Manifest, privKey *rsa.PrivateKey) ([]byte, error) {
