@@ -9,7 +9,9 @@ authorship and integrity.
 pkgsign -file="/path/to/file/to/sign" -key="/path/to/key" -cert="/path/to/cert"
 ````
 
-## Drop-dead simple way to create keys In case you are in need of a simple way
+## Drop-dead simple way to create keys
+
+In case you are in need of a simple way
 to create PEM-encoded public/private key pairs, I recommend
 [certstrap](http://github.com/square/certstrap). Instructions for creating a
 certificate authority and creating signed certificates are  available on the
