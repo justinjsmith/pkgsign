@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.org/justinjsmith/pkgsign.svg?branch=master)](https://travis-ci.org/justinjsmith/pkgsign)
+
 # pkgsign
 A simple utility for signing files with a private key. It is a companion to 
 [pkgverify](http://github.com/justinjsmith/pkgverify). 
