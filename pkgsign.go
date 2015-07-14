@@ -58,6 +58,7 @@ func usage() {
 }
 
 func report(err error) {
+	fmt.Fprint(os.Stderr, "\n")
 	scanner.PrintError(os.Stderr, err)
 	exitCode = 2
 }
@@ -71,7 +72,11 @@ func pkgSignMain() {
 	flag.Usage = usage
 	flag.Parse()
 
-	checkArgs()
+	err := checkArgs()
+	if err != nil {
+		report(err)
+		usage()
+	}
 
 	var pkgSha1 string
 	var fileToSign *os.File
@@ -144,26 +149,28 @@ func pkgSignMain() {
 	return
 }
 
-func checkArgs() {
+func checkArgs() error {
 	if *key == "" || *cert == "" {
-		usage()
+		return fmt.Errorf("Must specify a private key and a certificate.")
 	}
 
 	if *hash == "" && *file == "" {
-		usage()
+		return fmt.Errorf("Must use either a sha1 of a file or a filename.")
 	}
 
 	if *hash != "" && *file != "" {
-		usage()
+		return fmt.Errorf("Can't use a sha1 and a filename.")
 	}
 
 	if *hash != "" && *packageName == "" {
-		usage()
+		return fmt.Errorf("If using a hash you must specify a package name.")
 	}
 
 	if *file != "" && *packageName != "" {
-		usage()
+		return fmt.Errorf("Can't use a file and a package name.")
 	}
+
+	return nil
 }
 
 func loadCert(cert, key string) (*big.Int, error) {
