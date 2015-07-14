@@ -30,12 +30,14 @@ const (
 )
 
 var (
-	file     = flag.String("file", "", "the file to sign")
-	key      = flag.String("key", "", "the private key to use when signing")
-	cert     = flag.String("cert", "", "the certificate")
-	product  = flag.String("product", "", "the name of the product in the file (if applicable)")
-	company  = flag.String("corp", "", "the name of the signing organization")
-	exitCode = 0
+	file        = flag.String("file", "", "the file to sign")
+	packageName = flag.String("package", "", "the package name when used with the hash argument")
+	key         = flag.String("key", "", "the private key to use when signing")
+	hash        = flag.String("hash", "", "the checksum to sign")
+	cert        = flag.String("cert", "", "the certificate")
+	product     = flag.String("product", "", "the name of the product in the file (if applicable)")
+	company     = flag.String("corp", "", "the name of the signing organization")
+	exitCode    = 0
 )
 
 type Manifest struct {
@@ -69,18 +71,25 @@ func pkgSignMain() {
 	flag.Usage = usage
 	flag.Parse()
 
-	if *file == "" || *key == "" || *cert == "" {
-		usage()
-	}
+	checkArgs()
 
-	// open the file to sign and calculate the file's Sha1
-	fileToSign, err := os.Open(*file)
-	if err != nil {
-		report(err)
-		return
+	var pkgSha1 string
+	var fileToSign *os.File
+	if *file != "" {
+		// open the file to sign and calculate the file's Sha1
+		var err error
+		fileToSign, err = os.Open(*file)
+		if err != nil {
+			report(err)
+			return
+		}
+		defer fileToSign.Close()
+		pkgSha1Bytes := calcSha(fileToSign)
+		pkgSha1 = fmt.Sprintf("%x", pkgSha1Bytes)
+	} else {
+		// take the sha from the argument
+		pkgSha1 = *hash
 	}
-	defer fileToSign.Close()
-	pkgSha1 := calcSha(fileToSign)
 
 	// verify the certificate and private key are related & get the cert serial
 	// number
@@ -90,12 +99,19 @@ func pkgSignMain() {
 		return
 	}
 
+	var pkgName string
+	if fileToSign == nil {
+		pkgName = *packageName
+	} else {
+		pkgName = fileToSign.Name()
+	}
+
 	// build the manifest object
 	manifest := Manifest{
 		Company:     *company,
 		Product:     *product,
-		PackageName: fileToSign.Name(),
-		PackageSha1: fmt.Sprintf("%x", pkgSha1),
+		PackageName: pkgName,
+		PackageSha1: pkgSha1,
 		ReleaseDate: time.Now(),
 		KeyId:       serialNumber,
 	}
@@ -118,14 +134,36 @@ func pkgSignMain() {
 		report(err)
 		return
 	}
-	err = ioutil.WriteFile(fileToSign.Name()+".manifest", manBytes, 0444)
+	err = ioutil.WriteFile(pkgName+".manifest", manBytes, 0444)
 	if err != nil {
 		report(err)
 		return
 	}
 
-	fmt.Printf("Signed manifest written to %s\n", fileToSign.Name()+".manifest")
+	fmt.Printf("Signed manifest written to %s\n", pkgName+".manifest")
 	return
+}
+
+func checkArgs() {
+	if *key == "" || *cert == "" {
+		usage()
+	}
+
+	if *hash == "" && *file == "" {
+		usage()
+	}
+
+	if *hash != "" && *file != "" {
+		usage()
+	}
+
+	if *hash != "" && *packageName == "" {
+		usage()
+	}
+
+	if *file != "" && *packageName != "" {
+		usage()
+	}
 }
 
 func loadCert(cert, key string) (*big.Int, error) {
