@@ -12,7 +12,6 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"go/scanner"
 	"io"
 	"io/ioutil"
 	"math"
@@ -51,7 +50,7 @@ type Manifest struct {
 }
 
 func usage() {
-	fmt.Fprintf(os.Stderr, "\nusage: pkgsign -f [path] -k [path]\n")
+	fmt.Fprintf(os.Stderr, "\nusage: pkgsign -file [path] -key [path] -cert [path]\n")
 	flag.PrintDefaults()
 	fmt.Fprintf(os.Stderr, "\n")
 	os.Exit(2)
@@ -59,7 +58,7 @@ func usage() {
 
 func report(err error) {
 	fmt.Fprint(os.Stderr, "\n")
-	scanner.PrintError(os.Stderr, err)
+	fmt.Fprintf(os.Stderr, "\x1b[31m%s\x1b[39;49m\n", err)
 	exitCode = 2
 }
 
